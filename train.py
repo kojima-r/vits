@@ -47,6 +47,7 @@ def main():
   os.environ['MASTER_PORT'] = '80000'
 
   hps = utils.get_hparams()
+  print((n_gpus, hps,))
   mp.spawn(run, nprocs=n_gpus, args=(n_gpus, hps,))
 
 
@@ -67,7 +68,8 @@ def run(rank, n_gpus, hps):
   train_sampler = DistributedBucketSampler(
       train_dataset,
       hps.train.batch_size,
-      [32,300,400,500,600,700,800,900,1000],
+      #[32,300,400,500,600,700,800,900,1000],
+      [300,400,500,600,700,800,900,1000],
       num_replicas=n_gpus,
       rank=rank,
       shuffle=True)
@@ -96,8 +98,8 @@ def run(rank, n_gpus, hps):
       hps.train.learning_rate, 
       betas=hps.train.betas, 
       eps=hps.train.eps)
-  net_g = DDP(net_g, device_ids=[rank])
-  net_d = DDP(net_d, device_ids=[rank])
+  net_g = DDP(net_g, device_ids=[rank],find_unused_parameters=True)
+  net_d = DDP(net_d, device_ids=[rank],find_unused_parameters=True)
 
   try:
     _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "G_*.pth"), net_g, optim_g)

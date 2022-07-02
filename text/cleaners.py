@@ -98,3 +98,12 @@ def english_cleaners2(text):
   phonemes = phonemize(text, language='en-us', backend='espeak', strip=True, preserve_punctuation=True, with_stress=True)
   phonemes = collapse_whitespace(phonemes)
   return phonemes
+
+def japanese_cleaners(text):
+  phonemes = text.split('-')
+  return phonemes
+
+def symbol_cleaners(text):
+  phonemes = text.split('-')
+  return phonemes
+
