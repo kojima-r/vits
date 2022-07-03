@@ -1,5 +1,4 @@
 import streamlit as st
-
 st.title("FakeBird demo")
 
 import matplotlib.pyplot as plt
@@ -208,7 +207,7 @@ if "results" not in st.session_state:
 if start_flag:
     txt=None
     if len(st.session_state.phrase_text)>0:
-        txt="-".join(st.session_state.phrase_text)
+        txt="SIL"+"-".join(st.session_state.phrase_text)+"SIL"
     do(config_path,ckpt_path,txt,info_obj)
 
 

@@ -180,4 +180,4 @@ dependencies:
     - validators==0.20.0
     - watchdog==2.1.9
     - werkzeug==2.0.1
-prefix: /home/kojima/anaconda3/envs/vits
+prefix: /home/kojima/anaconda3/envs/fakebird
