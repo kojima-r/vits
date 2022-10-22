@@ -207,14 +207,16 @@ if "results" not in st.session_state:
 if start_flag:
     txt=None
     if len(st.session_state.phrase_text)>0:
-        txt="SIL"+"-".join(st.session_state.phrase_text)+"SIL"
+        txt="SIL-"+"-".join(st.session_state.phrase_text)+"-SIL"
     do(config_path,ckpt_path,txt,info_obj)
 
 
 for el in st.session_state.results:
-    fp = tempfile.NamedTemporaryFile()
+    fp = tempfile.NamedTemporaryFile(delete=False)
     sf.write(fp.name, el["audio"], el["sampling_rate"], format="wav")
     st.write(el["txt"].upper())
     st.audio(fp.name)
+    fp.close()
+    os.remove(fp.name)
 
 
