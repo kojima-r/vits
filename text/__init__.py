@@ -52,3 +52,18 @@ def _clean_text(text, cleaner_names):
       raise Exception('Unknown cleaner: %s' % name)
     text = cleaner(text)
   return text
+
+def text_to_generalized_sequence(text, cleaner_names):
+  sequence = []
+
+  clean_text = _clean_text(text, cleaner_names)
+  # symbol to id
+  for symbol in clean_text:
+    if type(symbol) is str:
+      sequence+=[_symbol_to_id[symbol]]
+    elif type(symbol) is dict:
+      new_d=dict()
+      for k in symbol.keys():
+        new_d[_symbol_to_id[k]]=symbol[k]
+      sequence+=[new_d]
+  return sequence
