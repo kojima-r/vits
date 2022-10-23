@@ -92,7 +92,7 @@ def do(config_path,ckpt_path,txt,info_obj):
     _ = utils.load_checkpoint(ckpt_path, net_g, None)
     
 
-    txt = 'SIL^ala^{"ai":0.5,"alc":0.5}^ala^{"ai":3,"hi":-1}^SIL'
+    # txt = 'SIL^ala^{"ai":0.5,"alc":0.5}^ala^{"ai":3,"hi":-1}^SIL'
     x_tst = get_text(txt, hps)
     with torch.no_grad():
         x_tst_lengths = torch.LongTensor([len(x_tst)])#.cuda()
@@ -158,17 +158,36 @@ with st.sidebar:
         st.write("Phrase:")
         if "phrase_text" not in st.session_state:
             st.session_state.phrase_text = []
+        if "phrase_text_D" not in st.session_state:
+            st.session_state.phrase_text_D = {}
         phrase_text=st.session_state.phrase_text
+        phrase_text_D=st.session_state.phrase_text_D
         phrase_placeholder = st.empty()
         s = st.selectbox(
-            'Select an sylable and push add button:',
+            'Select an syllable and push Add button:',
              symbol_list)
         if st.button('Add'):
             phrase_text.append(s)
+        
+        st.write("Generalized syllable:")
+        generalized_syllable_placeholder = st.empty()
+        gs = st.selectbox(
+            'Add and Mul of syllable vectors:',
+             symbol_list)
+        gn = st.number_input(
+            'Multiply a scalar',
+            value=1.0,
+            )
+        if st.button('Add+'):
+            phrase_text_D[gs]=gn
+        if st.button('Add Generalized syllable to Phrase'):
+            if phrase_text_D != {}:
+                phrase_text.append(json.dumps(phrase_text_D))
+                phrase_text_D = {}
+            
 
         new_phrase_text=[]
         with phrase_placeholder.container():
-            
             with elements("multiple_children"):
                 for i in range(MAX_PHRASE_LENGTH):
                     key="evt"+str(i)
@@ -192,8 +211,31 @@ with st.sidebar:
                                 onClick=sync(key)
                             )
 
+        new_phrase_text_D={}
 
+        with generalized_syllable_placeholder.container():
+            with elements("multiple_syllable_vectors"):
+                for k in phrase_text_D.keys():
+                    key="evtK"+str(k)
+                    if key not in st.session_state:
+                        st.session_state[key] = None
+
+                    if st.session_state[key] is not None:
+                        obj = st.session_state[key]
+                        st.session_state[key]=None
+                    else:
+                        new_phrase_text_D[k] = phrase_text_D[k]
+                        mui.Button(
+                            #mui.icon.ArrowForwardIos,
+                            mui.Typography(str(k)+':'+str(phrase_text_D[k])),
+                            mui.icon.ClearOutlined,
+                            variant="contained",
+                            className="labelButton",
+                            onClick=sync(key)
+                        )
+        
         st.session_state.phrase_text=new_phrase_text
+        st.session_state.phrase_text_D=new_phrase_text_D
 
 
     if sel_ckpt is not None:
@@ -217,5 +259,3 @@ for el in st.session_state.results:
     st.audio(fp.name)
     fp.close()
     os.remove(fp.name)
-
-
