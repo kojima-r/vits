@@ -166,24 +166,26 @@ with st.sidebar:
         s = st.selectbox(
             'Select an syllable and push Add button:',
              symbol_list)
-        if st.button('Add'):
-            phrase_text.append(s)
         
-        st.write("Generalized syllable:")
+        st.write("────────────────")
+        st.write("Custom syllable:")
         generalized_syllable_placeholder = st.empty()
         gs = st.selectbox(
-            'Add and Mul of syllable vectors:',
+            'Select an syllable and push Mix button:',
              symbol_list)
         gn = st.number_input(
-            'Multiply a scalar',
+            'Weight',
             value=1.0,
             )
-        if st.button('Add+'):
+        if st.button('Mix'):
             phrase_text_D[gs]=gn
-        if st.button('Add Generalized syllable to Phrase'):
+        # if st.button('Add'):
+        st.write("────────────────")
+        if st.button('Add'):
             if phrase_text_D != {}:
                 phrase_text.append(json.dumps(phrase_text_D))
                 phrase_text_D = {}
+            else:phrase_text.append(s)
             
 
         new_phrase_text=[]
