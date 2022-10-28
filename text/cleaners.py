@@ -12,6 +12,7 @@ hyperparameter. Some cleaners are English-specific. You'll typically want to use
      the symbols in symbols.py to match your data).
 '''
 
+import json
 import re
 from unidecode import unidecode
 from phonemizer import phonemize
@@ -104,6 +105,8 @@ def japanese_cleaners(text):
   return phonemes
 
 def symbol_cleaners(text):
-  phonemes = text.split('-')
+  phonemes = text.split('^')
+  for i in range(len(phonemes)):
+    if '{' in phonemes[i]:
+      phonemes[i] = json.loads(phonemes[i])
   return phonemes
-

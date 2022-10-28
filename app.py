@@ -15,9 +15,9 @@ from torch.utils.data import DataLoader
 import commons
 import utils
 from data_utils import TextAudioLoader, TextAudioCollate, TextAudioSpeakerLoader, TextAudioSpeakerCollate
-from models import SynthesizerTrn
+from models_comp import SynthesizerTrnComp
 from text.symbols import symbols
-from text import text_to_sequence
+from text import text_to_generalized_sequence
 
 from scipy.io.wavfile import write
 
@@ -43,11 +43,10 @@ def get_binary_file_downloader_html(bin_file, file_label='File', extension=""):
     return href
 
 def get_text(text, hps):
-    text_norm = text_to_sequence(text, hps.data.text_cleaners)
-    print(text_norm)
+    text_norm = text_to_generalized_sequence(text, hps.data.text_cleaners)
     if hps.data.add_blank:
         text_norm = commons.intersperse(text_norm, 0)
-    text_norm = torch.LongTensor(text_norm)
+    print(text_norm)
     return text_norm
 
 def search_true(txt,filename="./bird01_cath_valid.txt"):
@@ -78,12 +77,12 @@ def do(config_path,ckpt_path,txt,info_obj):
             if next_state==1:
                 break
 
-        txt="-".join([tr_syms[i] for i in states])
+        txt="^".join([tr_syms[i] for i in states])
 
     ####
     hps = utils.get_hparams_from_file(config_path)
 
-    net_g = SynthesizerTrn(
+    net_g = SynthesizerTrnComp(
         len(symbols),
         hps.data.filter_length // 2 + 1,
         hps.train.segment_size // hps.data.hop_length,
@@ -93,11 +92,11 @@ def do(config_path,ckpt_path,txt,info_obj):
     _ = utils.load_checkpoint(ckpt_path, net_g, None)
     
 
-    stn_tst = get_text(txt, hps)
+    # txt = 'SIL^ala^{"ai":0.5,"alc":0.5}^ala^{"ai":3,"hi":-1}^SIL'
+    x_tst = get_text(txt, hps)
     with torch.no_grad():
-        x_tst = stn_tst.unsqueeze(0)#.cuda()
-        x_tst_lengths = torch.LongTensor([stn_tst.size(0)])#.cuda()
-        audio = net_g.infer(x_tst, x_tst_lengths, noise_scale=.667, noise_scale_w=0.8, length_scale=1)[0][0,0].data.cpu().float().numpy()
+        x_tst_lengths = torch.LongTensor([len(x_tst)])#.cuda()
+        audio = net_g.inferComp(x_tst, x_tst_lengths, noise_scale=.667, noise_scale_w=0.8, length_scale=1)[0][0,0].data.cpu().float().numpy()
     
     #ipd.display(ipd.Audio(audio, rate=hps.data.sampling_rate, normalize=False))
     
@@ -159,17 +158,38 @@ with st.sidebar:
         st.write("Phrase:")
         if "phrase_text" not in st.session_state:
             st.session_state.phrase_text = []
+        if "phrase_text_D" not in st.session_state:
+            st.session_state.phrase_text_D = {}
         phrase_text=st.session_state.phrase_text
+        phrase_text_D=st.session_state.phrase_text_D
         phrase_placeholder = st.empty()
         s = st.selectbox(
-            'Select an sylable and push add button:',
+            'Select an syllable and push Add button:',
              symbol_list)
+        
+        st.write("────────────────")
+        st.write("Custom syllable:")
+        generalized_syllable_placeholder = st.empty()
+        gs = st.selectbox(
+            'Select an syllable and push Mix button:',
+             symbol_list)
+        gn = st.number_input(
+            'Weight',
+            value=1.0,
+            )
+        if st.button('Mix'):
+            phrase_text_D[gs]=gn
+        # if st.button('Add'):
+        st.write("────────────────")
         if st.button('Add'):
-            phrase_text.append(s)
+            if phrase_text_D != {}:
+                phrase_text.append(json.dumps(phrase_text_D))
+                phrase_text_D = {}
+            else:phrase_text.append(s)
+            
 
         new_phrase_text=[]
         with phrase_placeholder.container():
-            
             with elements("multiple_children"):
                 for i in range(MAX_PHRASE_LENGTH):
                     key="evt"+str(i)
@@ -193,8 +213,31 @@ with st.sidebar:
                                 onClick=sync(key)
                             )
 
+        new_phrase_text_D={}
 
+        with generalized_syllable_placeholder.container():
+            with elements("multiple_syllable_vectors"):
+                for k in phrase_text_D.keys():
+                    key="evtK"+str(k)
+                    if key not in st.session_state:
+                        st.session_state[key] = None
+
+                    if st.session_state[key] is not None:
+                        obj = st.session_state[key]
+                        st.session_state[key]=None
+                    else:
+                        new_phrase_text_D[k] = phrase_text_D[k]
+                        mui.Button(
+                            #mui.icon.ArrowForwardIos,
+                            mui.Typography(str(k)+':'+str(phrase_text_D[k])),
+                            mui.icon.ClearOutlined,
+                            variant="contained",
+                            className="labelButton",
+                            onClick=sync(key)
+                        )
+        
         st.session_state.phrase_text=new_phrase_text
+        st.session_state.phrase_text_D=new_phrase_text_D
 
 
     if sel_ckpt is not None:
@@ -207,14 +250,14 @@ if "results" not in st.session_state:
 if start_flag:
     txt=None
     if len(st.session_state.phrase_text)>0:
-        txt="SIL"+"-".join(st.session_state.phrase_text)+"SIL"
+        txt="SIL^"+"^".join(st.session_state.phrase_text)+"^SIL"
     do(config_path,ckpt_path,txt,info_obj)
 
 
 for el in st.session_state.results:
-    fp = tempfile.NamedTemporaryFile()
+    fp = tempfile.NamedTemporaryFile(delete=False)
     sf.write(fp.name, el["audio"], el["sampling_rate"], format="wav")
     st.write(el["txt"].upper())
     st.audio(fp.name)
-
-
+    fp.close()
+    os.remove(fp.name)
